@@ -268,11 +268,9 @@
             const login = document.getElementById('accountLogin').value;
             const server = document.getElementById('accountServer').value;
             const password = document.getElementById('accountPassword').value;
-            const token = document.getElementById('accountToken').value;
+            const accessToken = document.getElementById('accountToken').value;
             const accountId = document.getElementById('accountSelect').value;
             const name = document.getElementById('accountName').value || (login || accountId);
-            
-            const token = document.getElementById('accountToken').value;
             const refreshToken = document.getElementById('accountRefreshToken').value;
             
             const account = {
@@ -281,7 +279,7 @@
                 login: login || accountId,
                 server,
                 password,
-                access_token: token,
+                access_token: accessToken,
                 refresh_token: refreshToken,
                 account_id: accountId,
                 name: name
@@ -293,7 +291,7 @@
                     login: account.login,
                     server,
                     password,
-                    access_token: token,
+                    access_token: accessToken,
                     refresh_token: refreshToken,
                     account_id: accountId
                 };
