@@ -333,16 +333,20 @@ async def version():
 
 
 @app.get("/api/ctrader/accounts")
-async def get_ctrader_accounts(token: str):
+async def get_ctrader_accounts(token: str, refresh_token: str = None):
     """Fetch cTrader accounts using access token"""
     bridge = CToderBridge()
-    bridge.authenticate(access_token=token)
+    
+    if refresh_token:
+        bridge.set_tokens(token, refresh_token)
+    else:
+        bridge.authenticate(access_token=token)
     
     result = bridge._request("GET", "/api/v3/accounts")
     bridge.close()
     
     if not result or "accounts" not in result:
-        return {"accounts": []}
+        return {"accounts": [], "error": "Token may be expired"}
     
     accounts = []
     for acc in result["accounts"]:
@@ -359,6 +363,47 @@ async def get_ctrader_accounts(token: str):
             })
     
     return {"accounts": accounts}
+
+
+@app.post("/api/ctrader/refresh")
+async def refresh_ctrader_token():
+    """Refresh cTrader token using client credentials"""
+    import os
+    from pathlib import Path
+    
+    env_path = Path(__file__).parent.parent / ".env.local.txt"
+    app_id = ""
+    app_secret = ""
+    
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            if line.startswith("OpenAPI_ClientID="):
+                app_id = line.split("=")[1].strip()
+            elif line.startswith("OpenAPI_Secreat="):
+                app_secret = line.split("=")[1].strip()
+            elif line.startswith("CTRADER_OPENAPI_REFRESH_TOKEN="):
+                refresh_token = line.split("=")[1].strip()
+    
+    if not app_id or not app_secret or not refresh_token:
+        return {"error": "Missing credentials in .env"}
+    
+    bridge = CToderBridge(app_id=app_id, app_secret=app_secret)
+    result = bridge._request("POST", "/oauth/token", data={
+        "grant_type": "refresh_token",
+        "client_id": app_id,
+        "client_secret": app_secret,
+        "refresh_token": refresh_token
+    })
+    bridge.close()
+    
+    if not result:
+        return {"error": "Refresh failed"}
+    
+    return {
+        "access_token": result.get("access_token"),
+        "refresh_token": result.get("refresh_token"),
+        "expires_in": result.get("expires_in")
+    }
 
 
 if __name__ == "__main__":
