@@ -337,52 +337,51 @@ async def version():
 
 @app.get("/api/ctrader/accounts")
 async def get_ctrader_accounts(token: str, refresh_token: str = None):
-    """Fetch cTrader accounts using access token"""
-    import requests
-    
-    print(f"Testing with token: {token[:20]}...")
-    
-    urls_to_try = [
-        "https://openapi.ctrader.com/api/v3/accounts",
-        "https://api.ctrader.com/api/v3/accounts",
-        "https://connect.ctrader.com/api/v3/accounts"
-    ]
-    
-    for url in urls_to_try:
-        try:
-            print(f"Trying: {url}")
-            result = requests.get(
-                url,
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=10
-            )
-            print(f"  Status: {result.status_code}, Body: {result.text[:200]}")
+    """Fetch cTrader accounts using WebSocket"""
+    try:
+        from bridges.ctrader_bridge import CToderBridge
+        
+        bridge = CToderBridge()
+        
+        if refresh_token:
+            bridge.set_tokens(token, refresh_token)
+        else:
+            bridge.authenticate(access_token=token)
+        
+        # Connect to cTrader server
+        print(f"Connecting to cTrader server...")
+        if not bridge.connect(is_demo=False):
+            bridge.connect(is_demo=True)
+        
+        if bridge._connected:
+            # Get accounts list
+            accounts_req = {
+                "payloadType": 2301,
+                "payload": {}
+            }
+            result = bridge._send_json(accounts_req)
+            bridge.close()
             
-            if result.status_code == 200:
-                data = result.json()
-                if "accounts" in data:
-                    accounts = []
-                    for acc in data["accounts"]:
-                        if not acc.get("deleted"):
-                            accounts.append({
-                                "accountId": acc.get("accountId"),
-                                "accountNumber": acc.get("accountNumber"),
-                                "brokerName": acc.get("brokerName"),
-                                "depositCurrency": acc.get("depositCurrency"),
-                                "balance": acc.get("balance"),
-                                "leverage": acc.get("leverage"),
-                                "live": acc.get("live"),
-                                "accountStatus": acc.get("accountStatus")
-                            })
-                    return {"accounts": accounts}
-        except Exception as e:
-            print(f"  Error: {e}")
-            continue
+            if result and result.get("payload", {}).get("accounts"):
+                accounts = []
+                for acc in result["payload"]["accounts"]:
+                    accounts.append({
+                        "accountId": acc.get("accountId"),
+                        "accountNumber": acc.get("accountNumber"),
+                        "brokerName": acc.get("brokerName"),
+                        "depositCurrency": acc.get("depositCurrency"),
+                        "balance": acc.get("balance"),
+                        "leverage": acc.get("leverage"),
+                        "live": acc.get("live"),
+                        "accountStatus": acc.get("accountStatus")
+                    })
+                return {"accounts": accounts}
+        
+        return {"accounts": [], "error": "Cannot connect to cTrader server"}
     
-    return {
-        "error": "Cannot connect to cTrader API",
-        "hint": "Your token may be expired. Get new token from cTrader OpenAPI app"
-    }
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"error": str(e)}
 
 
 @app.post("/api/ctrader/refresh")
