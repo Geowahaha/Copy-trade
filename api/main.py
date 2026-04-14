@@ -335,48 +335,73 @@ async def version():
 @app.get("/api/ctrader/accounts")
 async def get_ctrader_accounts(token: str, refresh_token: str = None):
     """Fetch cTrader accounts using access token"""
-    bridge = CToderBridge()
+    import requests
     
-    if refresh_token:
-        bridge.set_tokens(token, refresh_token)
-    else:
-        bridge.authenticate(access_token=token)
+    print(f"Testing with token: {token[:20]}...")
     
-    result = bridge._request("GET", "/api/v3/accounts")
-    bridge.close()
+    urls_to_try = [
+        "https://openapi.ctrader.com/api/v3/accounts",
+        "https://api.ctrader.com/api/v3/accounts",
+        "https://connect.ctrader.com/api/v3/accounts"
+    ]
     
-    if not result or "accounts" not in result:
-        return {"accounts": [], "error": "Token may be expired"}
+    for url in urls_to_try:
+        try:
+            print(f"Trying: {url}")
+            result = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=10
+            )
+            print(f"  Status: {result.status_code}, Body: {result.text[:200]}")
+            
+            if result.status_code == 200:
+                data = result.json()
+                if "accounts" in data:
+                    accounts = []
+                    for acc in data["accounts"]:
+                        if not acc.get("deleted"):
+                            accounts.append({
+                                "accountId": acc.get("accountId"),
+                                "accountNumber": acc.get("accountNumber"),
+                                "brokerName": acc.get("brokerName"),
+                                "depositCurrency": acc.get("depositCurrency"),
+                                "balance": acc.get("balance"),
+                                "leverage": acc.get("leverage"),
+                                "live": acc.get("live"),
+                                "accountStatus": acc.get("accountStatus")
+                            })
+                    return {"accounts": accounts}
+        except Exception as e:
+            print(f"  Error: {e}")
+            continue
     
-    accounts = []
-    for acc in result["accounts"]:
-        if not acc.get("deleted"):
-            accounts.append({
-                "accountId": acc.get("accountId"),
-                "accountNumber": acc.get("accountNumber"),
-                "brokerName": acc.get("brokerName"),
-                "depositCurrency": acc.get("depositCurrency"),
-                "balance": acc.get("balance"),
-                "leverage": acc.get("leverage"),
-                "live": acc.get("live"),
-                "accountStatus": acc.get("accountStatus")
-            })
-    
-    return {"accounts": accounts}
+    return {
+        "error": "Cannot connect to cTrader API",
+        "hint": "Your token may be expired. Get new token from cTrader OpenAPI app"
+    }
 
 
 @app.post("/api/ctrader/refresh")
 async def refresh_ctrader_token():
     """Refresh cTrader token using client credentials"""
-    import os
     from pathlib import Path
     
-    env_path = Path(__file__).parent.parent / ".env.local.txt"
+    root = Path(__file__).parent.parent
+    env_path = root / ".env.local.txt"
+    
     app_id = ""
     app_secret = ""
+    refresh_token = ""
+    
+    print(f"Looking for env at: {env_path}")
+    print(f"Exists: {env_path.exists()}")
     
     if env_path.exists():
-        for line in env_path.read_text().splitlines():
+        content = env_path.read_text()
+        print(f"Env content: {content[:200]}")
+        
+        for line in content.splitlines():
             if line.startswith("OpenAPI_ClientID="):
                 app_id = line.split("=")[1].strip()
             elif line.startswith("OpenAPI_Secreat="):
@@ -384,8 +409,10 @@ async def refresh_ctrader_token():
             elif line.startswith("CTRADER_OPENAPI_REFRESH_TOKEN="):
                 refresh_token = line.split("=")[1].strip()
     
+    print(f"AppID: {app_id}, Secret: {app_secret[:10] if app_secret else None}, Refresh: {refresh_token[:10] if refresh_token else None}")
+    
     if not app_id or not app_secret or not refresh_token:
-        return {"error": "Missing credentials in .env"}
+        return {"error": "Missing credentials", "app_id": app_id, "app_secret": app_secret, "refresh_token": refresh_token}
     
     bridge = CToderBridge(app_id=app_id, app_secret=app_secret)
     result = bridge._request("POST", "/oauth/token", data={
@@ -397,7 +424,7 @@ async def refresh_ctrader_token():
     bridge.close()
     
     if not result:
-        return {"error": "Refresh failed"}
+        return {"error": "Refresh failed - check credentials"}
     
     return {
         "access_token": result.get("access_token"),
