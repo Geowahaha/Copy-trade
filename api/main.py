@@ -58,8 +58,8 @@ class SettingsIn(BaseModel):
 
 copy_engine = CopyEngine()
 monitor_task = None
-mt5_bridge = None
-ctrader_bridge = None
+mt5_bridges = []
+ctrader_bridges = []
 settings = None
 
 
@@ -90,19 +90,22 @@ async def get_status():
 
 @app.get("/api/settings")
 async def get_settings():
+    global settings
     if not settings:
-        return {"master": None, "slaves": []}
+        settings = load_settings()
+        if not settings:
+            return {"master": None, "slaves": [], "lot_multiplier": 1.0}
     
     return {
         "master": settings.master.to_dict() if settings.master else None,
-        "slaves": [s.to_dict() for s in settings.slaves],
-        "lot_multiplier": settings.lot_multiplier,
-        "max_lot": settings.max_lot,
-        "min_lot": settings.min_lot,
-        "reverse_trades": settings.reverse_trades,
-        "copy_sl": settings.copy_sl,
-        "copy_tp": settings.copy_tp,
-        "symbol_map": settings.symbol_map
+        "slaves": [s.to_dict() for s in (settings.slaves or [])],
+        "lot_multiplier": settings.lot_multiplier or 1.0,
+        "max_lot": settings.max_lot or 100.0,
+        "min_lot": settings.min_lot or 0.01,
+        "reverse_trades": settings.reverse_trades or False,
+        "copy_sl": settings.copy_sl if hasattr(settings, 'copy_sl') else True,
+        "copy_tp": settings.copy_tp if hasattr(settings, 'copy_tp') else True,
+        "symbol_map": settings.symbol_map or {}
     }
 
 
@@ -134,7 +137,7 @@ async def update_settings(data: SettingsIn):
 
 @app.post("/api/connect")
 async def connect_master(account: AccountIn):
-    global mt5_bridge, ctrader_bridge
+    global mt5_bridges, ctrader_bridges, settings
     
     if account.platform == "mt5":
         mt5_bridge = MT5Bridge()
@@ -147,8 +150,18 @@ async def connect_master(account: AccountIn):
         if not success:
             raise HTTPException(status_code=400, detail="MT5 connection failed")
         
+        mt5_bridges.append(mt5_bridge)
         copy_engine.register_bridge(PlatformType.MT5, mt5_bridge)
-        return {"status": "connected", "platform": "mt5"}
+        
+        settings.master = AccountConfig(
+            platform="mt5",
+            login=account.login,
+            server=account.server,
+            password=account.password
+        )
+        save_settings(settings)
+        
+        return {"status": "connected", "platform": "mt5", "login": account.login}
     
     elif account.platform == "ctrader":
         ctrader_bridge = CToderBridge()
@@ -160,17 +173,30 @@ async def connect_master(account: AccountIn):
         if account.account_id:
             ctrader_bridge.set_account(account.account_id)
         
+        ctrader_bridges.append(ctrader_bridge)
         copy_engine.register_bridge(PlatformType.CTRADER, ctrader_bridge)
-        return {"status": "connected", "platform": "ctrader"}
+        
+        settings.master = AccountConfig(
+            platform="ctrader",
+            login=account.account_id,
+            account_id=account.account_id,
+            access_token=account.access_token
+        )
+        save_settings(settings)
+        
+        return {"status": "connected", "platform": "ctrader", "account_id": account.account_id}
     
     raise HTTPException(status_code=400, detail="Unsupported platform")
 
 
 @app.post("/api/slave/add")
 async def add_slave(account: AccountIn):
-    global mt5_bridge, ctrader_bridge
+    global mt5_bridges, ctrader_bridges
     
     if account.platform == "mt5":
+        if not account.login or not account.password:
+            raise HTTPException(status_code=400, detail="Login and password required")
+        
         bridge = MT5Bridge()
         success = bridge.connect(
             login=int(account.login),
@@ -181,21 +207,44 @@ async def add_slave(account: AccountIn):
         if not success:
             raise HTTPException(status_code=400, detail="MT5 connection failed")
         
+        mt5_bridges.append(bridge)
         copy_engine.register_bridge(PlatformType.MT5, bridge)
-        return {"status": "added", "platform": "mt5"}
+        
+        settings.slaves = settings.slaves or []
+        settings.slaves.append(AccountConfig(
+            platform="mt5",
+            login=account.login,
+            server=account.server,
+            password=account.password
+        ))
+        save_settings(settings)
+        
+        return {"status": "added", "platform": "mt5", "login": account.login}
     
     elif account.platform == "ctrader":
+        if not account.access_token or not account.account_id:
+            raise HTTPException(status_code=400, detail="Access token and account ID required")
+        
         bridge = CToderBridge()
         success = bridge.authenticate(access_token=account.access_token)
         
         if not success:
             raise HTTPException(status_code=400, detail="cTrader auth failed")
         
-        if account.account_id:
-            bridge.set_account(account.account_id)
-        
+        bridge.set_account(account.account_id)
+        ctrader_bridges.append(bridge)
         copy_engine.register_bridge(PlatformType.CTRADER, bridge)
-        return {"status": "added", "platform": "ctrader"}
+        
+        settings.slaves = settings.slaves or []
+        settings.slaves.append(AccountConfig(
+            platform="ctrader",
+            login=account.account_id,
+            account_id=account.account_id,
+            access_token=account.access_token
+        ))
+        save_settings(settings)
+        
+        return {"status": "added", "platform": "ctrader", "account_id": account.account_id}
     
     raise HTTPException(status_code=400, detail="Unsupported platform")
 
