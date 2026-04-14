@@ -41,6 +41,7 @@ class AccountIn(BaseModel):
     server: str = ""
     password: str = ""
     access_token: str = ""
+    refresh_token: str = ""
     account_id: str = ""
 
 
@@ -165,10 +166,13 @@ async def connect_master(account: AccountIn):
     
     elif account.platform == "ctrader":
         ctrader_bridge = CToderBridge()
-        success = ctrader_bridge.authenticate(access_token=account.access_token)
         
-        if not success:
-            raise HTTPException(status_code=400, detail="cTrader auth failed")
+        if account.refresh_token:
+            ctrader_bridge.set_tokens(account.access_token, account.refresh_token)
+        else:
+            success = ctrader_bridge.authenticate(access_token=account.access_token)
+            if not success:
+                raise HTTPException(status_code=400, detail="cTrader auth failed")
         
         if account.account_id:
             ctrader_bridge.set_account(account.account_id)
@@ -180,7 +184,8 @@ async def connect_master(account: AccountIn):
             platform="ctrader",
             login=account.account_id,
             account_id=account.account_id,
-            access_token=account.access_token
+            access_token=account.access_token,
+            refresh_token=account.refresh_token
         )
         save_settings(settings)
         
@@ -226,10 +231,13 @@ async def add_slave(account: AccountIn):
             raise HTTPException(status_code=400, detail="Access token and account ID required")
         
         bridge = CToderBridge()
-        success = bridge.authenticate(access_token=account.access_token)
         
-        if not success:
-            raise HTTPException(status_code=400, detail="cTrader auth failed")
+        if account.refresh_token:
+            bridge.set_tokens(account.access_token, account.refresh_token)
+        else:
+            success = bridge.authenticate(access_token=account.access_token)
+            if not success:
+                raise HTTPException(status_code=400, detail="cTrader auth failed")
         
         bridge.set_account(account.account_id)
         ctrader_bridges.append(bridge)
@@ -240,7 +248,8 @@ async def add_slave(account: AccountIn):
             platform="ctrader",
             login=account.account_id,
             account_id=account.account_id,
-            access_token=account.access_token
+            access_token=account.access_token,
+            refresh_token=account.refresh_token
         ))
         save_settings(settings)
         

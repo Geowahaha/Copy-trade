@@ -186,6 +186,10 @@
                     <label>Access Token</label>
                     <input type="text" id="accountToken" placeholder="Paste cTrader access token">
                 </div>
+                <div class="form-group">
+                    <label>Refresh Token</label>
+                    <input type="text" id="accountRefreshToken" placeholder="Paste cTrader refresh token">
+                </div>
                 <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;" onclick="fetchAccounts()">🔍 Fetch My Accounts</button>
                 <div class="form-group" id="accountsDropdown" style="display: none;">
                     <label>Select Account</label>
@@ -268,6 +272,9 @@
             const accountId = document.getElementById('accountSelect').value;
             const name = document.getElementById('accountName').value || (login || accountId);
             
+            const token = document.getElementById('accountToken').value;
+            const refreshToken = document.getElementById('accountRefreshToken').value;
+            
             const account = {
                 id: Date.now(),
                 platform,
@@ -275,6 +282,7 @@
                 server,
                 password,
                 access_token: token,
+                refresh_token: refreshToken,
                 account_id: accountId,
                 name: name
             };
@@ -286,6 +294,7 @@
                     server,
                     password,
                     access_token: token,
+                    refresh_token: refreshToken,
                     account_id: accountId
                 };
                 

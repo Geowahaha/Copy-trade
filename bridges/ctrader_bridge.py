@@ -32,15 +32,69 @@ class CToderBridge:
             self.access_token = access_token
             self._session.headers["Authorization"] = f"Bearer {access_token}"
             return True
+        if refresh_token:
+            self.refresh_token = refresh_token
+            return True
         return False
+    
+    def set_tokens(self, access_token: str, refresh_token: str):
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+        self.token_expires = int(time.time()) + 3500
+        self._session.headers["Authorization"] = f"Bearer {access_token}"
+    
+    def _check_token_expired(self) -> bool:
+        if not self.access_token:
+            return True
+        if self.token_expires and time.time() > self.token_expires - 300:
+            return True
+        return False
+    
+    def refresh_access_token(self) -> bool:
+        if not self.refresh_token or not self.app_id or not self.app_secret:
+            print("Cannot refresh: missing refresh_token or app credentials")
+            return False
+        
+        data = {
+            "grant_type": "refresh_token",
+            "client_id": self.app_id,
+            "client_secret": self.app_secret,
+            "refresh_token": self.refresh_token
+        }
+        
+        result = self._request("POST", "/oauth/token", data=data)
+        if not result:
+            return False
+        
+        self.access_token = result.get("access_token")
+        self.refresh_token = result.get("refresh_token", self.refresh_token)
+        self.token_expires = int(time.time()) + result.get("expires_in", 3500)
+        self._session.headers["Authorization"] = f"Bearer {self.access_token}"
+        
+        print(f"Token refreshed, expires in {result.get('expires_in')}s")
+        return True
+    
+    def _ensure_valid_token(self) -> bool:
+        if self._check_token_expired() and self.refresh_token:
+            return self.refresh_access_token()
+        return bool(self.access_token)
     
     def set_account(self, account_id: str):
         self.account_id = account_id
     
     def _request(self, method: str, endpoint: str, data: dict = None, params: dict = None) -> Optional[Dict]:
+        self._ensure_valid_token()
+        
         url = f"{self.base_url}{endpoint}"
         try:
             response = self._session.request(method, url, json=data, params=params, timeout=10)
+            
+            if response.status_code == 401:
+                if self.refresh_access_token():
+                    response = self._session.request(method, url, json=data, params=params, timeout=10)
+                else:
+                    return None
+            
             response.raise_for_status()
             return response.json() if response.content else {}
         except requests.RequestException as e:
