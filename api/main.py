@@ -29,6 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import FileResponse
+from pathlib import Path
+
+UI_PATH = Path(__file__).parent.parent / "ui"
+
 
 class AccountIn(BaseModel):
     platform: str
@@ -67,7 +72,7 @@ async def startup():
 
 @app.get("/")
 async def root():
-    return {"message": "CopyTrade Pro API", "version": "1.0.0"}
+    return FileResponse(UI_PATH / "index.html")
 
 
 @app.get("/api/status")

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CopyTrade Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1419; color: #e7e9ea; min-height: 100vh; }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        header { background: #1a1f26; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 24px; color: #1d9bf0; }
+        .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        .status-stopped { background: #f4212e; color: white; }
+        .status-running { background: #00ba7c; color: white; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        
+        .card { background: #1a1f26; border-radius: 16px; padding: 20px; }
+        .card h2 { font-size: 18px; margin-bottom: 16px; color: #e7e9ea; border-bottom: 1px solid #2f3943; padding-bottom: 12px; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 14px; color: #8b98a5; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2f3943; background: #0f1419; color: #e7e9ea; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #1d9bf0; }
+        
+        .row { display: flex; gap: 12px; }
+        .row .form-group { flex: 1; }
+        
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #1d9bf0; color: white; }
+        .btn-primary:hover { background: #1a8cd8; }
+        .btn-danger { background: #f4212e; color: white; }
+        .btn-danger:hover { background: #e11e2a; }
+        .btn-success { background: #00ba7c; color: white; }
+        .btn-success:hover { background: #009a4c; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-group { display: flex; gap: 12px; margin-top: 20px; }
+        
+        .account-list { margin-top: 20px; }
+        .account-item { background: #0f1419; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .account-item .info { display: flex; align-items: center; gap: 12px; }
+        .platform-badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; background: #1d9bf0; color: white; }
+        .platform-badge.mt5 { background: #27ae60; }
+        .platform-badge.ctrader { background: #e67e22; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+        .stat-box { background: #0f1419; padding: 16px; border-radius: 8px; text-align: center; }
+        .stat-box .value { font-size: 24px; font-weight: 700; color: #1d9bf0; }
+        .stat-box .label { font-size: 12px; color: #8b98a5; margin-top: 4px; }
+        
+        .positions-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .positions-table th, .positions-table td { padding: 12px; text-align: left; border-bottom: 1px solid #2f3943; }
+        .positions-table th { color: #8b98a5; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .positions-table .buy { color: #00ba7c; }
+        .positions-table .sell { color: #f4212e; }
+        
+        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: none; }
+        .alert.show { display: block; }
+        .alert-success { background: #00ba7c; color: white; }
+        .alert-error { background: #f4212e; color: white; }
+        
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+        .tab { padding: 10px 20px; border-radius: 8px; background: transparent; border: none; color: #8b98a5; cursor: pointer; font-size: 14px; }
+        .tab.active { background: #1d9bf0; color: white; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CopyTrade Pro</h1>
+            <span id="statusBadge" class="status-badge status-stopped">STOPPED</span>
+        </header>
+        
+        <div id="alertBox" class="alert alert-success"></div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>Master Account</h2>
+                <div class="form-group">
+                    <label>Platform</label>
+                    <select id="masterPlatform">
+                        <option value="mt5">MetaTrader 5</option>
+                        <option value="ctrader">cTrader</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Login / Account ID</label>
+                    <input type="text" id="masterLogin" placeholder="123456">
+                </div>
+                <div class="form-group">
+                    <label>Server</label>
+                    <input type="text" id="masterServer" placeholder="Broker-Server">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="masterPassword" placeholder="Your password">
+                </div>
+                <div class="form-group" id="masterTokenGroup" class="hidden">
+                    <label>Access Token</label>
+                    <input type="text" id="masterToken" placeholder="cTrader access token">
+                </div>
+                <button class="btn btn-primary" onclick="connectMaster()">Connect Master</button>
+                
+                <div class="account-list" id="masterInfo"></div>
+            </div>
+            
+            <div class="card">
+                <h2>Slave Accounts</h2>
+                <div class="tabs">
+                    <button class="tab active" onclick="showSlaveForm('mt5')">Add MT5</button>
+                    <button class="tab" onclick="showSlaveForm('ctrader')">Add cTrader</button>
+                </div>
+                
+                <div id="slaveMt5Form">
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Login</label>
+                            <input type="text" id="slaveLogin" placeholder="123456">
+                        </div>
+                        <div class="form-group">
+                            <label>Server</label>
+                            <input type="text" id="slaveServer" placeholder="Broker-Server">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="slavePassword" placeholder="Your password">
+                    </div>
+                    <button class="btn btn-success" onclick="addSlave('mt5')">Add MT5 Slave</button>
+                </div>
+                
+                <div id="slaveCtraderForm" class="hidden">
+                    <div class="form-group">
+                        <label>Account ID</label>
+                        <input type="text" id="slaveAccountId" placeholder="Account ID">
+                    </div>
+                    <div class="form-group">
+                        <label>Access Token</label>
+                        <input type="text" id="slaveToken" placeholder="Access token">
+                    </div>
+                    <button class="btn btn-success" onclick="addSlave('ctrader')">Add cTrader Slave</button>
+                </div>
+                
+                <div class="account-list" id="slaveList"></div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>Settings</h2>
+            <div class="row">
+                <div class="form-group">
+                    <label>Lot Multiplier</label>
+                    <input type="number" id="lotMultiplier" value="1.0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Max Lot</label>
+                    <input type="number" id="maxLot" value="100" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Min Lot</label>
+                    <input type="number" id="minLot" value="0.01" step="0.01">
+                </div>
+            </div>
+            <div class="row">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="copySl" checked>
+                    Copy Stop Loss
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="copyTp" checked>
+                    Copy Take Profit
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="reverseTrades">
+                    Reverse Trades
+                </label>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>Control</h2>
+            <div class="btn-group">
+                <button id="startBtn" class="btn btn-success" onclick="startCopying()">Start Copying</button>
+                <button id="stopBtn" class="btn btn-danger" onclick="stopCopying()" disabled>Stop</button>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="value" id="positionsCount">0</div>
+                    <div class="label">Active Positions</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="latencyAvg">0ms</div>
+                    <div class="label">Avg Latency</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="latencyMin">0ms</div>
+                    <div class="label">Min Latency</div>
+                </div>
+                <div class="stat-box">
+                    <div class="value" id="latencyMax">0ms</div>
+                    <div class="label">Max Latency</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>Positions</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="showPositions('all')">All</button>
+                <button class="tab" onclick="showPositions('master')">Master</button>
+                <button class="tab" onclick="showPositions('slaves')">Slaves</button>
+            </div>
+            <table class="positions-table">
+                <thead>
+                    <tr>
+                        <th>Ticket</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Volume</th>
+                        <th>Price</th>
+                        <th>Platform</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsTable">
+                    <tr><td colspan="6" style="text-align: center; color: #8b98a5;">No positions</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        const API = 'http://localhost:8000';
+        let running = false;
+        let refreshInterval = null;
+        
+        function showAlert(message, type = 'success') {
+            const alert = document.getElementById('alertBox');
+            alert.textContent = message;
+            alert.className = 'alert show alert-' + type;
+            setTimeout(() => alert.className = 'alert', 3000);
+        }
+        
+        function showSlaveForm(platform) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('slaveMt5Form').classList.toggle('hidden', platform !== 'mt5');
+            document.getElementById('slaveCtraderForm').classList.toggle('hidden', platform !== 'ctrader');
+        }
+        
+        function showPositions(type) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            loadPositions();
+        }
+        
+        async function connectMaster() {
+            const platform = document.getElementById('masterPlatform').value;
+            const login = document.getElementById('masterLogin').value;
+            const server = document.getElementById('masterServer').value;
+            const password = document.getElementById('masterPassword').value;
+            const token = document.getElementById('masterToken').value;
+            
+            if (!login) { showAlert('Please enter login', 'error'); return; }
+            
+            try {
+                const data = { platform, login, server, password, access_token: token };
+                const res = await fetch(API + '/api/connect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                
+                if (res.ok) {
+                    showAlert('Master connected!');
+                    loadMasterInfo();
+                } else {
+                    showAlert(result.detail || 'Connection failed', 'error');
+                }
+            } catch(e) {
+                showAlert('Cannot connect to API', 'error');
+            }
+        }
+        
+        async function loadMasterInfo() {
+            try {
+                const res = await fetch(API + '/api/account');
+                const data = await res.json();
+                if (data) {
+                    document.getElementById('masterInfo').innerHTML = `
+                        <div class="account-item">
+                            <div class="info">
+                                <span class="platform-badge">${data.login}</span>
+                                <span>Balance: $${data.balance?.toFixed(2)}</span>
+                                <span>Equity: $${data.equity?.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch(e) {}
+        }
+        
+        async function addSlave(platform) {
+            const login = document.getElementById('slaveLogin').value;
+            const server = document.getElementById('slaveServer').value;
+            const password = document.getElementById('slavePassword').value;
+            const accountId = document.getElementById('slaveAccountId').value;
+            const token = document.getElementById('slaveToken').value;
+            
+            const data = { platform, login, server, password, access_token: token, account_id: accountId };
+            
+            try {
+                const res = await fetch(API + '/api/slave/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    showAlert('Slave added!');
+                    loadSlaves();
+                } else {
+                    const result = await res.json();
+                    showAlert(result.detail || 'Failed to add slave', 'error');
+                }
+            } catch(e) {
+                showAlert('Cannot connect to API', 'error');
+            }
+        }
+        
+        async function loadSlaves() {
+            const settings = await fetch(API + '/api/settings').then(r => r.json());
+            const list = document.getElementById('slaveList');
+            if (settings.slaves && settings.slaves.length > 0) {
+                list.innerHTML = settings.slaves.map(s => `
+                    <div class="account-item">
+                        <div class="info">
+                            <span class="platform-badge ${s.platform}">${s.platform.toUpperCase()}</span>
+                            <span>${s.login || s.account_id}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        async function startCopying() {
+            await saveSettings();
+            
+            try {
+                const res = await fetch(API + '/api/start', {method: 'POST'});
+                if (res.ok) {
+                    running = true;
+                    document.getElementById('statusBadge').className = 'status-badge status-running';
+                    document.getElementById('statusBadge').textContent = 'RUNNING';
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    showAlert('Copying started!');
+                    loadPositions();
+                    refreshInterval = setInterval(refreshStats, 1000);
+                } else {
+                    showAlert('Failed to start', 'error');
+                }
+            } catch(e) {
+                showAlert('Cannot start', 'error');
+            }
+        }
+        
+        async function stopCopying() {
+            try {
+                await fetch(API + '/api/stop', {method: 'POST'});
+                running = false;
+                document.getElementById('statusBadge').className = 'status-badge status-stopped';
+                document.getElementById('statusBadge').textContent = 'STOPPED';
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                if (refreshInterval) clearInterval(refreshInterval);
+            } catch(e) {}
+        }
+        
+        async function saveSettings() {
+            const data = {
+                lot_multiplier: parseFloat(document.getElementById('lotMultiplier').value),
+                max_lot: parseFloat(document.getElementById('maxLot').value),
+                min_lot: parseFloat(document.getElementById('minLot').value),
+                copy_sl: document.getElementById('copySl').checked,
+                copy_tp: document.getElementById('copyTp').checked,
+                reverse_trades: document.getElementById('reverseTrades').checked
+            };
+            
+            await fetch(API + '/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+        }
+        
+        async function loadPositions() {
+            try {
+                const res = await fetch(API + '/api/positions');
+                const data = await res.json();
+                
+                const all = [...(data.master || []), ...(data.slaves || [])];
+                const tbody = document.getElementById('positionsTable');
+                
+                if (all.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #8b98a5;">No positions</td></tr>';
+                } else {
+                    tbody.innerHTML = all.map(p => `
+                        <tr>
+                            <td>${p.ticket || p.positionId || '-'}</td>
+                            <td>${p.symbol}</td>
+                            <td class="${(p.type || p.side || '').toLowerCase()}">${p.type || p.side || '-'}</td>
+                            <td>${p.volume || p.quantity || '-'}</td>
+                            <td>${p.price_open || p.entry_price || '-'}</td>
+                            <td><span class="platform-badge">${p.platform || 'mt5'}</span></td>
+                        </tr>
+                    `).join('');
+                }
+                
+                document.getElementById('positionsCount').textContent = all.length;
+            } catch(e) {}
+        }
+        
+        async function refreshStats() {
+            try {
+                const res = await fetch(API + '/api/status');
+                const data = await res.json();
+                
+                if (data.latency) {
+                    document.getElementById('latencyAvg').textContent = Math.round(data.latency.avg) + 'ms';
+                    document.getElementById('latencyMin').textContent = Math.round(data.latency.min) + 'ms';
+                    document.getElementById('latencyMax').textContent = Math.round(data.latency.max) + 'ms';
+                }
+                
+                loadPositions();
+            } catch(e) {}
+        }
+        
+        document.getElementById('masterPlatform').addEventListener('change', function() {
+            const tokenGroup = document.getElementById('masterTokenGroup');
+            tokenGroup.classList.toggle('hidden', this.value !== 'ctrader');
+        });
+        
+        loadSlaves();
+    </script>
+</body>
+</html>
