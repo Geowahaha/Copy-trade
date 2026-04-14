@@ -179,6 +179,9 @@ async def connect_master(account: AccountIn):
                 info = ctrader_bridge.get_account_info()
                 ctrader_bridge.close()
                 print(f"cTrader connected, account info: {info}")
+        except Exception as e:
+            print(f"cTrader error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
         
         settings.master = AccountConfig(
             platform="ctrader",
