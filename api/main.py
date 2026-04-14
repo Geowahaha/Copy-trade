@@ -323,6 +323,35 @@ async def version():
     return {"version": "1.0.0", "name": "CopyTrade Pro"}
 
 
+@app.get("/api/ctrader/accounts")
+async def get_ctrader_accounts(token: str):
+    """Fetch cTrader accounts using access token"""
+    bridge = CToderBridge()
+    bridge.authenticate(access_token=token)
+    
+    result = bridge._request("GET", "/api/v3/accounts")
+    bridge.close()
+    
+    if not result or "accounts" not in result:
+        return {"accounts": []}
+    
+    accounts = []
+    for acc in result["accounts"]:
+        if not acc.get("deleted"):
+            accounts.append({
+                "accountId": acc.get("accountId"),
+                "accountNumber": acc.get("accountNumber"),
+                "brokerName": acc.get("brokerName"),
+                "depositCurrency": acc.get("depositCurrency"),
+                "balance": acc.get("balance"),
+                "leverage": acc.get("leverage"),
+                "live": acc.get("live"),
+                "accountStatus": acc.get("accountStatus")
+            })
+    
+    return {"accounts": accounts}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -107,6 +107,7 @@
                     <input type="text" id="masterToken" placeholder="cTrader access token">
                 </div>
                 <button class="btn btn-primary" onclick="connectMaster()">Connect Master</button>
+                <button class="btn btn-success" style="margin-left: 8px;" id="fetchAccountsBtn" onclick="fetchCtraderAccounts()">Fetch Accounts</button>
                 
                 <div class="account-list" id="masterInfo"></div>
             </div>
@@ -246,6 +247,71 @@
             alert.textContent = message;
             alert.className = 'alert show alert-' + type;
             setTimeout(() => alert.className = 'alert', 3000);
+        }
+        
+        async function fetchCtraderAccounts() {
+            const token = document.getElementById('masterToken').value;
+            if (!token) { showAlert('Please enter cTrader access token', 'error'); return; }
+            
+            document.getElementById('fetchAccountsBtn').disabled = true;
+            document.getElementById('fetchAccountsBtn').textContent = 'Loading...';
+            
+            try {
+                const res = await fetch(API + '/api/ctrader/accounts?token=' + encodeURIComponent(token));
+                const data = await res.json();
+                
+                if (data.accounts && data.accounts.length > 0) {
+                    localStorage.setItem('ctrader_token', token);
+                    localStorage.setItem('ctrader_accounts', JSON.stringify(data.accounts));
+                    showAlert('Found ' + data.accounts.length + ' accounts!');
+                    renderAccountSelector(data.accounts);
+                } else {
+                    showAlert('No accounts found', 'error');
+                }
+            } catch(e) {
+                showAlert('Failed to fetch accounts', 'error');
+            }
+            
+            document.getElementById('fetchAccountsBtn').disabled = false;
+            document.getElementById('fetchAccountsBtn').textContent = 'Fetch Accounts';
+        }
+        
+        function renderAccountSelector(accounts) {
+            const container = document.getElementById('masterInfo');
+            let html = '<div style="margin-top: 20px;"><strong>Select Account:</strong></div>';
+            html += '<div style="max-height: 300px; overflow-y: auto; margin-top: 10px;">';
+            
+            accounts.forEach(acc => {
+                const live = acc.live ? '🟢' : '⚪';
+                html += `
+                    <div class="account-item" style="cursor: pointer;" onclick="selectAccount(${acc.accountId}, '${acc.depositCurrency}', ${acc.balance})">
+                        <div class="info">
+                            <span>${live}</span>
+                            <span>${acc.accountNumber}</span>
+                            <span class="platform-badge ctrader">${acc.brokerName}</span>
+                            <span>${acc.depositCurrency}</span>
+                            <span>$${acc.balance?.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        function selectAccount(accountId, currency, balance) {
+            document.getElementById('masterLogin').value = accountId;
+            document.getElementById('masterInfo').innerHTML = `
+                <div class="account-item">
+                    <div class="info">
+                        <span class="platform-badge ctrader">CTRADER</span>
+                        <span>Account: ${accountId}</span>
+                        <span>${currency}</span>
+                        <span>Balance: $${balance?.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+            showAlert('Account ' + accountId + ' selected!');
         }
         
         function showSlaveForm(platform) {
