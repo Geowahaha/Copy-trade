@@ -165,20 +165,20 @@ async def connect_master(account: AccountIn):
         return {"status": "connected", "platform": "mt5", "login": account.login}
     
     elif account.platform == "ctrader":
-        ctrader_bridge = CToderBridge()
-        
-        if account.refresh_token:
-            ctrader_bridge.set_tokens(account.access_token, account.refresh_token)
-        else:
-            success = ctrader_bridge.authenticate(access_token=account.access_token)
-            if not success:
-                raise HTTPException(status_code=400, detail="cTrader auth failed")
-        
-        if account.account_id:
-            ctrader_bridge.set_account(account.account_id)
-        
-        ctrader_bridges.append(ctrader_bridge)
-        copy_engine.register_bridge(PlatformType.CTRADER, ctrader_bridge)
+        try:
+            from bridges.ctrader_bridge import CToderBridge as CTBridge
+            ctrader_bridge = CTBridge()
+            
+            if account.access_token:
+                ctrader_bridge.set_tokens(account.access_token, account.refresh_token or "")
+            
+            if account.account_id:
+                ctrader_bridge.set_account(account.account_id)
+                ctrader_bridge.connect()
+                ctrader_bridge.account_auth(account.account_id)
+                info = ctrader_bridge.get_account_info()
+                ctrader_bridge.close()
+                print(f"cTrader connected, account info: {info}")
         
         settings.master = AccountConfig(
             platform="ctrader",
