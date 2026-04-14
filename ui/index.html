@@ -3,519 +3,441 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CopyTrade Pro</title>
+    <title>CopyTrade Pro - Drag & Drop</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1419; color: #e7e9ea; min-height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e13; color: #fff; min-height: 100vh; }
         
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
-        header { background: #1a1f26; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        header h1 { font-size: 24px; color: #1d9bf0; }
-        .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; }
-        .status-stopped { background: #f4212e; color: white; }
-        .status-running { background: #00ba7c; color: white; }
+        header { background: #151a22; padding: 20px 30px; border-radius: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #00d4ff, #7b2fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .status-pill { padding: 8px 20px; border-radius: 24px; font-weight: 600; font-size: 14px; }
+        .status-stopped { background: #ff4757; color: white; }
+        .status-running { background: #2ed573; color: #0a0e13; }
         
-        .card { background: #1a1f26; border-radius: 16px; padding: 20px; }
-        .card h2 { font-size: 18px; margin-bottom: 16px; color: #e7e9ea; border-bottom: 1px solid #2f3943; padding-bottom: 12px; }
+        .main-area { display: grid; grid-template-columns: 280px 1fr 280px; gap: 24px; min-height: 70vh; }
+        @media (max-width: 1024px) { .main-area { grid-template-columns: 1fr; } }
+        
+        .column { background: #151a22; border-radius: 20px; padding: 20px; }
+        .column h2 { font-size: 16px; color: #6b7a8f; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #252d3a; }
+        
+        .drop-zone { min-height: 200px; border: 2px dashed #2a3444; border-radius: 16px; padding: 16px; transition: all 0.3s; }
+        .drop-zone.drag-over { border-color: #00d4ff; background: rgba(0, 212, 255, 0.1); }
+        
+        .account-card { background: #1e2633; border-radius: 12px; padding: 14px; margin-bottom: 10px; cursor: grab; transition: all 0.2s; border: 1px solid #2a3444; }
+        .account-card:hover { border-color: #00d4ff; transform: translateY(-2px); }
+        .account-card.mt5 { border-left: 4px solid #27ae60; }
+        .account-card.ctrader { border-left: 4px solid #e67e22; }
+        .account-card.master { border-left: 4px solid #00d4ff; }
+        
+        .account-card .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .account-card .platform { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 6px; }
+        .platform-mt5 { background: #27ae60; color: white; }
+        .platform-ctrader { background: #e67e22; color: white; }
+        
+        .account-card .account-id { font-size: 14px; font-weight: 600; }
+        .account-card .broker { font-size: 12px; color: #6b7a8f; }
+        .account-card .balance { font-size: 16px; font-weight: 700; color: #2ed573; }
+        
+        .connection-line { height: 4px; background: linear-gradient(90deg, #00d4ff, #7b2fff); margin: 20px 0; position: relative; }
+        .connection-line::after { content: '➜'; position: absolute; right: 10px; top: -14px; color: #7b2fff; font-size: 20px; }
+        
+        .btn-add { width: 100%; padding: 40px; border: 2px dashed #2a3444; border-radius: 16px; background: transparent; color: #6b7a8f; cursor: pointer; transition: all 0.3s; font-size: 16px; }
+        .btn-add:hover { border-color: #00d4ff; color: #00d4ff; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: #151a22; border-radius: 20px; padding: 30px; width: 420px; max-width: 90vw; }
+        .modal-content h3 { margin-bottom: 20px; font-size: 20px; }
         
         .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; margin-bottom: 6px; font-size: 14px; color: #8b98a5; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2f3943; background: #0f1419; color: #e7e9ea; font-size: 14px; }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: #1d9bf0; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #8b98a5; }
+        .form-group input, .form-group select { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid #2a3444; background: #0a0e13; color: #fff; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #00d4ff; }
         
-        .row { display: flex; gap: 12px; }
-        .row .form-group { flex: 1; }
+        .btn { padding: 14px 28px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #00d4ff; color: #0a0e13; }
+        .btn-primary:hover { background: #00b8e6; }
+        .btn-secondary { background: #2a3444; color: #fff; }
+        .btn-close { background: #ff4757; color: white; }
         
-        .btn { padding: 12px 24px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .btn-primary { background: #1d9bf0; color: white; }
-        .btn-primary:hover { background: #1a8cd8; }
-        .btn-danger { background: #f4212e; color: white; }
-        .btn-danger:hover { background: #e11e2a; }
-        .btn-success { background: #00ba7c; color: white; }
-        .btn-success:hover { background: #009a4c; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-row { display: flex; gap: 12px; margin-top: 20px; }
+        .btn-row .btn { flex: 1; }
         
-        .btn-group { display: flex; gap: 12px; margin-top: 20px; }
+        .connections-list { margin-top: 20px; }
+        .connection-item { background: #1e2633; padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+        .connection-item .arrow { color: #7b2fff; font-size: 18px; }
         
-        .account-list { margin-top: 20px; }
-        .account-item { background: #0f1419; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .account-item .info { display: flex; align-items: center; gap: 12px; }
-        .platform-badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; background: #1d9bf0; color: white; }
-        .platform-badge.mt5 { background: #27ae60; }
-        .platform-badge.ctrader { background: #e67e22; }
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; }
+        .stat-box { background: #1e2633; padding: 20px; border-radius: 12px; text-align: center; }
+        .stat-box .value { font-size: 28px; font-weight: 700; color: #00d4ff; }
+        .stat-box .label { font-size: 12px; color: #6b7a8f; margin-top: 4px; }
         
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
-        .stat-box { background: #0f1419; padding: 16px; border-radius: 8px; text-align: center; }
-        .stat-box .value { font-size: 24px; font-weight: 700; color: #1d9bf0; }
-        .stat-box .label { font-size: 12px; color: #8b98a5; margin-top: 4px; }
+        .alert { position: fixed; top: 20px; right: 20px; padding: 16px 24px; border-radius: 12px; font-weight: 600; z-index: 2000; transform: translateX(400px); transition: transform 0.3s; }
+        .alert.show { transform: translateX(0); }
+        .alert-success { background: #2ed573; color: #0a0e13; }
+        .alert-error { background: #ff4757; color: white; }
         
-        .positions-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        .positions-table th, .positions-table td { padding: 12px; text-align: left; border-bottom: 1px solid #2f3943; }
-        .positions-table th { color: #8b98a5; font-size: 12px; font-weight: 600; text-transform: uppercase; }
-        .positions-table .buy { color: #00ba7c; }
-        .positions-table .sell { color: #f4212e; }
-        
-        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: none; }
-        .alert.show { display: block; }
-        .alert-success { background: #00ba7c; color: white; }
-        .alert-error { background: #f4212e; color: white; }
-        
-        .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
-        .tab { padding: 10px 20px; border-radius: 8px; background: transparent; border: none; color: #8b98a5; cursor: pointer; font-size: 14px; }
-        .tab.active { background: #1d9bf0; color: white; }
-        
-        .hidden { display: none; }
+        .running-indicator { display: none; }
+        .running-indicator.show { display: flex; align-items: center; gap: 8px; }
+        .pulse { width: 10px; height: 10px; background: #2ed573; border-radius: 50%; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
+    <div class="alert" id="alert"></div>
+    
     <div class="container">
         <header>
             <h1>CopyTrade Pro</h1>
-            <span id="statusBadge" class="status-badge status-stopped">STOPPED</span>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div class="running-indicator" id="runningIndicator">
+                    <div class="pulse"></div>
+                    <span>COPING</span>
+                </div>
+                <span class="status-pill status-stopped" id="statusPill">STOPPED</span>
+            </div>
         </header>
         
-        <div id="alertBox" class="alert alert-success"></div>
-        
-        <div class="grid">
-            <div class="card">
-                <h2>Master Account</h2>
-                <div class="form-group">
-                    <label>Platform</label>
-                    <select id="masterPlatform">
-                        <option value="mt5">MetaTrader 5</option>
-                        <option value="ctrader">cTrader</option>
-                    </select>
+        <div class="main-area">
+            <div class="column">
+                <h2>📥 Master Account</h2>
+                <div class="drop-zone" id="masterZone" ondragover="dragOver(event)" ondrop="dropMaster(event)">
+                    <button class="btn-add" onclick="showAddModal('master')">+ Add Master Account</button>
                 </div>
-                <div class="form-group">
-                    <label>Login / Account ID</label>
-                    <input type="text" id="masterLogin" placeholder="123456">
-                </div>
-                <div class="form-group">
-                    <label>Server</label>
-                    <input type="text" id="masterServer" placeholder="Broker-Server">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="masterPassword" placeholder="Your password">
-                </div>
-                <div class="form-group" id="masterTokenGroup" class="hidden">
-                    <label>Access Token</label>
-                    <input type="text" id="masterToken" placeholder="cTrader access token">
-                </div>
-                <button class="btn btn-primary" onclick="connectMaster()">Connect Master</button>
-                <button class="btn btn-success" style="margin-left: 8px;" id="fetchAccountsBtn" onclick="fetchCtraderAccounts()">Fetch Accounts</button>
-                
-                <div class="account-list" id="masterInfo"></div>
+                <div id="masterCard"></div>
             </div>
             
-            <div class="card">
-                <h2>Slave Accounts</h2>
-                <div class="tabs">
-                    <button class="tab active" onclick="showSlaveForm('mt5')">Add MT5</button>
-                    <button class="tab" onclick="showSlaveForm('ctrader')">Add cTrader</button>
+            <div class="column" style="background: linear-gradient(180deg, #151a22 0%, #1a1528 100%);">
+                <h2>🔄 Copy Engine</h2>
+                <div style="text-align: center; padding: 40px;">
+                    <div class="connection-line"></div>
                 </div>
+                <div class="connections-list" id="connectionsList"></div>
                 
-                <div id="slaveMt5Form">
-                    <div class="row">
-                        <div class="form-group">
-                            <label>Login</label>
-                            <input type="text" id="slaveLogin" placeholder="123456">
+                <div style="margin-top: auto;">
+                    <div class="stats-bar">
+                        <div class="stat-box">
+                            <div class="value" id="positionsCount">0</div>
+                            <div class="label">Positions</div>
                         </div>
-                        <div class="form-group">
-                            <label>Server</label>
-                            <input type="text" id="slaveServer" placeholder="Broker-Server">
+                        <div class="stat-box">
+                            <div class="value" id="latencyAvg">0ms</div>
+                            <div class="label">Latency</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="value" id="totalTrades">0</div>
+                            <div class="label">Trades</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="value" id="copyRate">0%</div>
+                            <div class="label">Success</div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <input type="password" id="slavePassword" placeholder="Your password">
+                    
+                    <div style="display: flex; gap: 12px; margin-top: 24px;">
+                        <button class="btn btn-primary" style="flex: 1; padding: 18px;" onclick="startCopying()" id="startBtn">▶ Start Copying</button>
+                        <button class="btn btn-close" style="flex: 1;" onclick="stopCopying()" id="stopBtn" disabled>■ Stop</button>
                     </div>
-                    <button class="btn btn-success" onclick="addSlave('mt5')">Add MT5 Slave</button>
                 </div>
-                
-                <div id="slaveCtraderForm" class="hidden">
-                    <div class="form-group">
-                        <label>Account ID</label>
-                        <input type="text" id="slaveAccountId" placeholder="Account ID">
-                    </div>
-                    <div class="form-group">
-                        <label>Access Token</label>
-                        <input type="text" id="slaveToken" placeholder="Access token">
-                    </div>
-                    <button class="btn btn-success" onclick="addSlave('ctrader')">Add cTrader Slave</button>
-                </div>
-                
-                <div class="account-list" id="slaveList"></div>
-            </div>
-        </div>
-        
-        <div class="card" style="margin-top: 20px;">
-            <h2>Settings</h2>
-            <div class="row">
-                <div class="form-group">
-                    <label>Lot Multiplier</label>
-                    <input type="number" id="lotMultiplier" value="1.0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>Max Lot</label>
-                    <input type="number" id="maxLot" value="100" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>Min Lot</label>
-                    <input type="number" id="minLot" value="0.01" step="0.01">
-                </div>
-            </div>
-            <div class="row">
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="copySl" checked>
-                    Copy Stop Loss
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="copyTp" checked>
-                    Copy Take Profit
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="reverseTrades">
-                    Reverse Trades
-                </label>
-            </div>
-        </div>
-        
-        <div class="card" style="margin-top: 20px;">
-            <h2>Control</h2>
-            <div class="btn-group">
-                <button id="startBtn" class="btn btn-success" onclick="startCopying()">Start Copying</button>
-                <button id="stopBtn" class="btn btn-danger" onclick="stopCopying()" disabled>Stop</button>
             </div>
             
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <div class="value" id="positionsCount">0</div>
-                    <div class="label">Active Positions</div>
+            <div class="column">
+                <h2>📤 Slave Accounts</h2>
+                <div class="drop-zone" id="slaveZone" ondragover="dragOver(event)" ondrop="dropSlave(event)">
+                    <button class="btn-add" onclick="showAddModal('slave')">+ Add Slave Account</button>
                 </div>
-                <div class="stat-box">
-                    <div class="value" id="latencyAvg">0ms</div>
-                    <div class="label">Avg Latency</div>
-                </div>
-                <div class="stat-box">
-                    <div class="value" id="latencyMin">0ms</div>
-                    <div class="label">Min Latency</div>
-                </div>
-                <div class="stat-box">
-                    <div class="value" id="latencyMax">0ms</div>
-                    <div class="label">Max Latency</div>
-                </div>
+                <div id="slaveCards"></div>
             </div>
-        </div>
-        
-        <div class="card" style="margin-top: 20px;">
-            <h2>Positions</h2>
-            <div class="tabs">
-                <button class="tab active" onclick="showPositions('all')">All</button>
-                <button class="tab" onclick="showPositions('master')">Master</button>
-                <button class="tab" onclick="showPositions('slaves')">Slaves</button>
-            </div>
-            <table class="positions-table">
-                <thead>
-                    <tr>
-                        <th>Ticket</th>
-                        <th>Symbol</th>
-                        <th>Side</th>
-                        <th>Volume</th>
-                        <th>Price</th>
-                        <th>Platform</th>
-                    </tr>
-                </thead>
-                <tbody id="positionsTable">
-                    <tr><td colspan="6" style="text-align: center; color: #8b98a5;">No positions</td></tr>
-                </tbody>
-            </table>
         </div>
     </div>
     
+    <!-- Add Account Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Add Account</h3>
+            <div class="form-group">
+                <label>Platform</label>
+                <select id="accountPlatform" onchange="platformChanged()">
+                    <option value="mt5">MetaTrader 5</option>
+                    <option value="ctrader">cTrader</option>
+                </select>
+            </div>
+            
+            <div id="mt5Fields">
+                <div class="form-group">
+                    <label>Login</label>
+                    <input type="number" id="accountLogin" placeholder="123456">
+                </div>
+                <div class="form-group">
+                    <label>Server</label>
+                    <input type="text" id="accountServer" placeholder="ICMarkets-SC">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="accountPassword" placeholder="Your password">
+                </div>
+            </div>
+            
+            <div id="ctraderFields" style="display: none;">
+                <div class="form-group">
+                    <label>Access Token</label>
+                    <input type="text" id="accountToken" placeholder="Paste cTrader access token">
+                </div>
+                <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;" onclick="fetchAccounts()">🔍 Fetch My Accounts</button>
+                <div class="form-group" id="accountsDropdown" style="display: none;">
+                    <label>Select Account</label>
+                    <select id="accountSelect"></select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Account Name (optional)</label>
+                <input type="text" id="accountName" placeholder="My Trading Account">
+            </div>
+            
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAccount()">Save Account</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = 'http://localhost:8000';
+        let accounts = [];
+        let masterAccount = null;
+        let slaveAccounts = [];
         let running = false;
-        let refreshInterval = null;
+        let addMode = 'slave';
         
-        function showAlert(message, type = 'success') {
-            const alert = document.getElementById('alertBox');
-            alert.textContent = message;
-            alert.className = 'alert show alert-' + type;
-            setTimeout(() => alert.className = 'alert', 3000);
+        function showAlert(msg, type = 'success') {
+            const alert = document.getElementById('alert');
+            alert.textContent = msg;
+            alert.className = 'alert alert-' + type + ' show';
+            setTimeout(() => alert.classList.remove('show'), 3000);
         }
         
-        async function fetchCtraderAccounts() {
-            const token = document.getElementById('masterToken').value;
-            if (!token) { showAlert('Please enter cTrader access token', 'error'); return; }
-            
-            document.getElementById('fetchAccountsBtn').disabled = true;
-            document.getElementById('fetchAccountsBtn').textContent = 'Loading...';
+        function showAddModal(mode) {
+            addMode = mode;
+            document.getElementById('modalTitle').textContent = mode === 'master' ? 'Add Master Account' : 'Add Slave Account';
+            document.getElementById('addModal').classList.add('show');
+        }
+        
+        function closeModal() {
+            document.getElementById('addModal').classList.remove('show');
+        }
+        
+        function platformChanged() {
+            const platform = document.getElementById('accountPlatform').value;
+            document.getElementById('mt5Fields').style.display = platform === 'mt5' ? 'block' : 'none';
+            document.getElementById('ctraderFields').style.display = platform === 'ctrader' ? 'block' : 'none';
+        }
+        
+        async function fetchAccounts() {
+            const token = document.getElementById('accountToken').value;
+            if (!token) { showAlert('Please enter access token', 'error'); return; }
             
             try {
                 const res = await fetch(API + '/api/ctrader/accounts?token=' + encodeURIComponent(token));
                 const data = await res.json();
                 
                 if (data.accounts && data.accounts.length > 0) {
-                    localStorage.setItem('ctrader_token', token);
-                    localStorage.setItem('ctrader_accounts', JSON.stringify(data.accounts));
+                    const select = document.getElementById('accountSelect');
+                    select.innerHTML = data.accounts.map(a => 
+                        `<option value="${a.accountId}">${a.accountNumber} - ${a.brokerName} (${a.depositCurrency}) ${a.balance > 0 ? '$' + a.balance.toFixed(0) : ''}</option>`
+                    ).join('');
+                    document.getElementById('accountsDropdown').style.display = 'block';
                     showAlert('Found ' + data.accounts.length + ' accounts!');
-                    renderAccountSelector(data.accounts);
                 } else {
                     showAlert('No accounts found', 'error');
                 }
             } catch(e) {
                 showAlert('Failed to fetch accounts', 'error');
             }
-            
-            document.getElementById('fetchAccountsBtn').disabled = false;
-            document.getElementById('fetchAccountsBtn').textContent = 'Fetch Accounts';
         }
         
-        function renderAccountSelector(accounts) {
-            const container = document.getElementById('masterInfo');
-            let html = '<div style="margin-top: 20px;"><strong>Select Account:</strong></div>';
-            html += '<div style="max-height: 300px; overflow-y: auto; margin-top: 10px;">';
+        async function saveAccount() {
+            const platform = document.getElementById('accountPlatform').value;
+            const login = document.getElementById('accountLogin').value;
+            const server = document.getElementById('accountServer').value;
+            const password = document.getElementById('accountPassword').value;
+            const token = document.getElementById('accountToken').value;
+            const accountId = document.getElementById('accountSelect').value;
+            const name = document.getElementById('accountName').value || (login || accountId);
             
-            accounts.forEach(acc => {
-                const live = acc.live ? '🟢' : '⚪';
-                html += `
-                    <div class="account-item" style="cursor: pointer;" onclick="selectAccount(${acc.accountId}, '${acc.depositCurrency}', ${acc.balance})">
-                        <div class="info">
-                            <span>${live}</span>
-                            <span>${acc.accountNumber}</span>
-                            <span class="platform-badge ctrader">${acc.brokerName}</span>
-                            <span>${acc.depositCurrency}</span>
-                            <span>$${acc.balance?.toFixed(2)}</span>
+            const account = {
+                id: Date.now(),
+                platform,
+                login: login || accountId,
+                server,
+                password,
+                access_token: token,
+                account_id: accountId,
+                name: name
+            };
+            
+            try {
+                const data = {
+                    platform,
+                    login: account.login,
+                    server,
+                    password,
+                    access_token: token,
+                    account_id: accountId
+                };
+                
+                if (addMode === 'master') {
+                    await fetch(API + '/api/connect', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    });
+                    masterAccount = account;
+                    renderMaster();
+                } else {
+                    await fetch(API + '/api/slave/add', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    });
+                    slaveAccounts.push(account);
+                    renderSlaves();
+                }
+                
+                showAlert(addMode === 'master' ? 'Master connected!' : 'Slave added!');
+                closeModal();
+            } catch(e) {
+                showAlert('Failed to connect', 'error');
+            }
+        }
+        
+        function renderMaster() {
+            const zone = document.getElementById('masterZone');
+            if (masterAccount) {
+                const p = masterAccount.platform;
+                zone.innerHTML = `
+                    <div class="account-card master" draggable="true" ondragstart="dragStart(event, 'master')">
+                        <div class="header">
+                            <span class="platform platform-${p}">${p.toUpperCase()}</span>
+                            <span style="font-size: 20px;">👑</span>
                         </div>
+                        <div class="account-id">${masterAccount.name || masterAccount.login}</div>
+                        <div class="broker">${masterAccount.server || 'Connected'}</div>
                     </div>
                 `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
+            } else {
+                zone.innerHTML = '<button class="btn-add" onclick="showAddModal(\'master\')">+ Add Master Account</button>';
+            }
         }
         
-        function selectAccount(accountId, currency, balance) {
-            document.getElementById('masterLogin').value = accountId;
-            document.getElementById('masterInfo').innerHTML = `
-                <div class="account-item">
-                    <div class="info">
-                        <span class="platform-badge ctrader">CTRADER</span>
-                        <span>Account: ${accountId}</span>
-                        <span>${currency}</span>
-                        <span>Balance: $${balance?.toFixed(2)}</span>
+        function renderSlaves() {
+            const container = document.getElementById('slaveCards');
+            container.innerHTML = slaveAccounts.map((a, i) => `
+                <div class="account-card ${a.platform}" draggable="true" ondragstart="dragStart(event, 'slave', ${i})" onclick="removeSlave(${i})" title="Click to remove">
+                    <div class="header">
+                        <span class="platform platform-${a.platform}">${a.platform.toUpperCase()}</span>
+                        <span style="color: #ff4757;">✕</span>
                     </div>
+                    <div class="account-id">${a.name || a.login}</div>
+                    <div class="broker">${a.server || 'Connected'}</div>
                 </div>
-            `;
-            showAlert('Account ' + accountId + ' selected!');
-        }
-        
-        function showSlaveForm(platform) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('slaveMt5Form').classList.toggle('hidden', platform !== 'mt5');
-            document.getElementById('slaveCtraderForm').classList.toggle('hidden', platform !== 'ctrader');
-        }
-        
-        function showPositions(type) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            loadPositions();
-        }
-        
-        async function connectMaster() {
-            const platform = document.getElementById('masterPlatform').value;
-            const login = document.getElementById('masterLogin').value;
-            const server = document.getElementById('masterServer').value;
-            const password = document.getElementById('masterPassword').value;
-            const token = document.getElementById('masterToken').value;
+            `).join('');
             
-            if (!login) { showAlert('Please enter login', 'error'); return; }
-            
-            try {
-                const data = { platform, login, server, password, access_token: token };
-                const res = await fetch(API + '/api/connect', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-                const result = await res.json();
-                
-                if (res.ok) {
-                    showAlert('Master connected!');
-                    loadMasterInfo();
-                } else {
-                    showAlert(result.detail || 'Connection failed', 'error');
-                }
-            } catch(e) {
-                showAlert('Cannot connect to API', 'error');
+            if (slaveAccounts.length === 0) {
+                document.getElementById('slaveZone').innerHTML = '<button class="btn-add" onclick="showAddModal(\'slave\')">+ Add Slave Account</button>';
             }
         }
         
-        async function loadMasterInfo() {
-            try {
-                const res = await fetch(API + '/api/account');
-                const data = await res.json();
-                if (data) {
-                    document.getElementById('masterInfo').innerHTML = `
-                        <div class="account-item">
-                            <div class="info">
-                                <span class="platform-badge">${data.login}</span>
-                                <span>Balance: $${data.balance?.toFixed(2)}</span>
-                                <span>Equity: $${data.equity?.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            } catch(e) {}
+        function dragStart(e, mode, index) {
+            e.dataTransfer.setData('mode', mode);
+            e.dataTransfer.setData('index', index);
         }
         
-        async function addSlave(platform) {
-            const login = document.getElementById('slaveLogin').value;
-            const server = document.getElementById('slaveServer').value;
-            const password = document.getElementById('slavePassword').value;
-            const accountId = document.getElementById('slaveAccountId').value;
-            const token = document.getElementById('slaveToken').value;
-            
-            const data = { platform, login, server, password, access_token: token, account_id: accountId };
-            
-            try {
-                const res = await fetch(API + '/api/slave/add', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-                
-                if (res.ok) {
-                    showAlert('Slave added!');
-                    loadSlaves();
-                } else {
-                    const result = await res.json();
-                    showAlert(result.detail || 'Failed to add slave', 'error');
-                }
-            } catch(e) {
-                showAlert('Cannot connect to API', 'error');
-            }
+        function dragOver(e) {
+            e.preventDefault();
+            e.target.closest('.drop-zone')?.classList.add('drag-over');
         }
         
-        async function loadSlaves() {
-            const settings = await fetch(API + '/api/settings').then(r => r.json());
-            const list = document.getElementById('slaveList');
-            if (settings.slaves && settings.slaves.length > 0) {
-                list.innerHTML = settings.slaves.map(s => `
-                    <div class="account-item">
-                        <div class="info">
-                            <span class="platform-badge ${s.platform}">${s.platform.toUpperCase()}</span>
-                            <span>${s.login || s.account_id}</span>
-                        </div>
-                    </div>
-                `).join('');
+        function dropMaster(e) {
+            e.preventDefault();
+            document.getElementById('masterZone').classList.remove('drag-over');
+        }
+        
+        function dropSlave(e) {
+            e.preventDefault();
+            document.getElementById('slaveZone').classList.remove('drag-over');
+        }
+        
+        function removeSlave(index) {
+            if (confirm('Remove this slave account?')) {
+                slaveAccounts.splice(index, 1);
+                renderSlaves();
             }
         }
         
         async function startCopying() {
-            await saveSettings();
+            if (!masterAccount) { showAlert('Please add master account first', 'error'); return; }
+            if (slaveAccounts.length === 0) { showAlert('Please add at least one slave', 'error'); return; }
             
-            try {
-                const res = await fetch(API + '/api/start', {method: 'POST'});
-                if (res.ok) {
-                    running = true;
-                    document.getElementById('statusBadge').className = 'status-badge status-running';
-                    document.getElementById('statusBadge').textContent = 'RUNNING';
-                    document.getElementById('startBtn').disabled = true;
-                    document.getElementById('stopBtn').disabled = false;
-                    showAlert('Copying started!');
-                    loadPositions();
-                    refreshInterval = setInterval(refreshStats, 1000);
-                } else {
-                    showAlert('Failed to start', 'error');
-                }
-            } catch(e) {
-                showAlert('Cannot start', 'error');
-            }
+            await fetch(API + '/api/start', { method: 'POST' });
+            running = true;
+            
+            document.getElementById('statusPill').className = 'status-pill status-running';
+            document.getElementById('statusPill').textContent = 'RUNNING';
+            document.getElementById('runningIndicator').classList.add('show');
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            showAlert('Copying started!');
+            startRefresh();
         }
         
         async function stopCopying() {
-            try {
-                await fetch(API + '/api/stop', {method: 'POST'});
-                running = false;
-                document.getElementById('statusBadge').className = 'status-badge status-stopped';
-                document.getElementById('statusBadge').textContent = 'STOPPED';
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('stopBtn').disabled = true;
-                if (refreshInterval) clearInterval(refreshInterval);
-            } catch(e) {}
-        }
-        
-        async function saveSettings() {
-            const data = {
-                lot_multiplier: parseFloat(document.getElementById('lotMultiplier').value),
-                max_lot: parseFloat(document.getElementById('maxLot').value),
-                min_lot: parseFloat(document.getElementById('minLot').value),
-                copy_sl: document.getElementById('copySl').checked,
-                copy_tp: document.getElementById('copyTp').checked,
-                reverse_trades: document.getElementById('reverseTrades').checked
-            };
+            await fetch(API + '/api/stop', { method: 'POST' });
+            running = false;
             
-            await fetch(API + '/api/settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+            document.getElementById('statusPill').className = 'status-pill status-stopped';
+            document.getElementById('statusPill').textContent = 'STOPPED';
+            document.getElementById('runningIndicator').classList.remove('show');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
         }
         
-        async function loadPositions() {
+        function startRefresh() {
+            setInterval(async () => {
+                if (!running) return;
+                try {
+                    const res = await fetch(API + '/api/status');
+                    const data = await res.json();
+                    
+                    document.getElementById('positionsCount').textContent = data.positions || 0;
+                    if (data.latency) {
+                        document.getElementById('latencyAvg').textContent = Math.round(data.latency.avg) + 'ms';
+                    }
+                } catch(e) {}
+            }, 1000);
+        }
+        
+        loadAccounts();
+        async function loadAccounts() {
             try {
-                const res = await fetch(API + '/api/positions');
+                const res = await fetch(API + '/api/settings');
                 const data = await res.json();
                 
-                const all = [...(data.master || []), ...(data.slaves || [])];
-                const tbody = document.getElementById('positionsTable');
-                
-                if (all.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #8b98a5;">No positions</td></tr>';
-                } else {
-                    tbody.innerHTML = all.map(p => `
-                        <tr>
-                            <td>${p.ticket || p.positionId || '-'}</td>
-                            <td>${p.symbol}</td>
-                            <td class="${(p.type || p.side || '').toLowerCase()}">${p.type || p.side || '-'}</td>
-                            <td>${p.volume || p.quantity || '-'}</td>
-                            <td>${p.price_open || p.entry_price || '-'}</td>
-                            <td><span class="platform-badge">${p.platform || 'mt5'}</span></td>
-                        </tr>
-                    `).join('');
+                if (data.master) {
+                    masterAccount = { ...data.master, id: 1 };
+                    renderMaster();
                 }
                 
-                document.getElementById('positionsCount').textContent = all.length;
-            } catch(e) {}
-        }
-        
-        async function refreshStats() {
-            try {
-                const res = await fetch(API + '/api/status');
-                const data = await res.json();
-                
-                if (data.latency) {
-                    document.getElementById('latencyAvg').textContent = Math.round(data.latency.avg) + 'ms';
-                    document.getElementById('latencyMin').textContent = Math.round(data.latency.min) + 'ms';
-                    document.getElementById('latencyMax').textContent = Math.round(data.latency.max) + 'ms';
+                if (data.slaves && data.slaves.length > 0) {
+                    slaveAccounts = data.slaves.map((s, i) => ({ ...s, id: i + 2 }));
+                    renderSlaves();
                 }
-                
-                loadPositions();
             } catch(e) {}
         }
-        
-        document.getElementById('masterPlatform').addEventListener('change', function() {
-            const tokenGroup = document.getElementById('masterTokenGroup');
-            tokenGroup.classList.toggle('hidden', this.value !== 'ctrader');
-        });
-        
-        loadSlaves();
     </script>
 </body>
 </html>
